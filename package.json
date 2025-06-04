@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "mcp-server",
   "module": "src/index.ts",
   "type": "module",
@@ -29,5 +30,27 @@
     "eventsource": "^4.0.0",
     "fastmcp": "^1.21.0",
     "zod": "^3.24.2"
+=======
+  "name": "thinkforce-mcp",
+  "version": "0.1.0",
+  "description": "MCP server with Instagram tools",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "fastmcp": "^2.2.1",
+    "instagram-private-api": "^1.46.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.11.19",
+    "dotenv": "^16.4.5"
+>>>>>>> 562236e6f418293ea8f964bcc9c70dc7809895cc
   }
 }
