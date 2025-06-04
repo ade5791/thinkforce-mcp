@@ -1,6 +1,6 @@
 import { IgApiClient } from 'instagram-private-api';
 import { readFile } from 'fs/promises';
-import { cons } from 'effect/List';
+
 
 export async function login(username: string, password: string) {
   console.log(`Logging in to Instagram as ${username}`);

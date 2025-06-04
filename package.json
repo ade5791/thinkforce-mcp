@@ -7,8 +7,6 @@
   "private": true,
   "scripts": {
     "start": "npx tsx src/server/http-server.ts",
-    "build": "npx build src/index.ts --outdir build --target node",
-    "build:http": "npx build src/server/http-server.ts --outdir build --target node",
     "dev": "npx --watch src/index.ts",
     "start:http": "npx tsx src/server/http-server.ts",
     "dev:http": "npx --watch src/server/http-server.ts"
