@@ -1,6 +1,7 @@
 import { FastMCP } from "fastmcp";
 import { z } from "zod";
 import * as services from "./services/index.js";
+import { instagramTools } from "../tools/instagramTools.js";
 
 /**
  * Register all tools with the MCP server
@@ -264,5 +265,10 @@ export function registerTools(server: FastMCP) {
         throw error;
       }
     }
+  });
+
+  // Register Instagram tools
+  instagramTools.forEach(tool => {
+    server.addTool(tool);
   });
 }

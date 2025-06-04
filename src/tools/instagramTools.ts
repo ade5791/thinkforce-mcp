@@ -1,57 +1,165 @@
 import { z } from 'zod';
-import { login, uploadPhoto, uploadVideo, getProfile, getTimelineFeed } from '../instagram';
+import { login, uploadPhoto, uploadVideo, getProfile, getTimelineFeed } from '../instagram.js';
 import type { Tool } from 'fastmcp';
+import fs from 'fs';
+import path from 'path';
+import { promisify } from 'util';
+import { pipeline } from 'stream';
 
-function getCredentials() {
-  const username = process.env.IG_USERNAME;
-  const password = process.env.IG_PASSWORD;
-  if (!username || !password) {
-    throw new Error('Instagram credentials not provided');
+const streamPipeline = promisify(pipeline);
+
+
+async function downloadFile(url: string, filename: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download file: ${response.statusText}`);
   }
-  return { username, password };
+  
+  const tempDir = path.join(process.cwd(), 'temp');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  
+  const filePath = path.join(tempDir, filename);
+  const fileStream = fs.createWriteStream(filePath);
+  
+  if (response.body) {
+    await streamPipeline(response.body as any, fileStream);
+  }
+  
+  return filePath;
+}
+
+function cleanupFile(filePath: string): void {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (error) {
+    console.warn(`Failed to cleanup file ${filePath}:`, error);
+  }
+}
+
+function getFileExtension(url: string): string {
+  const urlPath = new URL(url).pathname;
+  const ext = path.extname(urlPath);
+  return ext || '.jpg'; // Default to .jpg if no extension found
 }
 
 export const instagramTools: Tool<any>[] = [
   {
     name: 'instagram_upload_photo',
-    description: 'Upload a photo to Instagram',
+    description: 'Upload a photo to Instagram from a URL',
     parameters: z.object({
-      filePath: z.string().describe('Path to image file'),
+      username: z.string().describe('Instagram username'),
+      password: z.string().describe('Instagram password'),
+      imageUrl: z.string().url().describe('URL of the image to upload'),
       caption: z.string().optional().describe('Photo caption')
     }),
     execute: async (args: any) => {
-      const { filePath, caption } = args as { filePath: string; caption?: string };
-      const { username, password } = getCredentials();
-      const ig = await login(username, password);
-      const result = await uploadPhoto(ig, filePath, caption);
-      return JSON.stringify(result);
+      const { username, password, imageUrl, caption } = args as { username: string; password: string; imageUrl: string; caption?: string };
+
+      console.log('Executing instagram_upload_photo with args:', args);
+      let localFilePath: string | null = null;
+      
+      try {
+        const ig = await login(username, password);
+        
+        // Generate filename with timestamp and extension from URL
+        const timestamp = Date.now();
+        const extension = getFileExtension(imageUrl);
+        const filename = `instagram_photo_${timestamp}${extension}`;
+        
+        // Download the file
+        localFilePath = await downloadFile(imageUrl, filename);
+        
+        // Upload to Instagram
+        const result = await uploadPhoto(ig, localFilePath, caption);
+        
+        return JSON.stringify({
+          success: true,
+          message: 'Photo uploaded successfully',
+          ...result
+        });
+      } catch (error: any) {
+        return JSON.stringify({
+          success: false,
+          error: error.message
+        });
+      } finally {
+        // Always cleanup the temporary file
+        if (localFilePath) {
+          cleanupFile(localFilePath);
+        }
+      }
     }
   },
   {
     name: 'instagram_upload_video',
-    description: 'Upload a video to Instagram',
+    description: 'Upload a video to Instagram from URLs',
     parameters: z.object({
-      videoPath: z.string().describe('Path to video file'),
-      coverImagePath: z.string().describe('Path to cover image file'),
+      videoUrl: z.string().url().describe('URL of the video file'),
+      username: z.string().describe('Instagram username'),
+      password: z.string().describe('Instagram password'),
+      coverImageUrl: z.string().url().describe('URL of the cover image file'),
       caption: z.string().optional().describe('Video caption')
     }),
     execute: async (args: any) => {
-      const { videoPath, coverImagePath, caption } = args as { videoPath: string; coverImagePath: string; caption?: string };
-      const { username, password } = getCredentials();
-      const ig = await login(username, password);
-      const result = await uploadVideo(ig, videoPath, coverImagePath, caption);
-      return JSON.stringify(result);
+      const { videoUrl, coverImageUrl, caption ,username,password} = args as { videoUrl: string; coverImageUrl: string; caption?: string; username: string; password: string };
+      let localVideoPath: string | null = null;
+      let localCoverPath: string | null = null;
+      console.log('Executing instagram_upload_video with args:', args);
+
+      try {
+   
+        const ig = await login(username, password);
+        
+        // Generate filenames with timestamp and extensions from URLs
+        const timestamp = Date.now();
+        const videoExtension = getFileExtension(videoUrl);
+        const coverExtension = getFileExtension(coverImageUrl);
+        const videoFilename = `instagram_video_${timestamp}${videoExtension}`;
+        const coverFilename = `instagram_cover_${timestamp}${coverExtension}`;
+        
+        // Download both files
+        localVideoPath = await downloadFile(videoUrl, videoFilename);
+        localCoverPath = await downloadFile(coverImageUrl, coverFilename);
+        
+        // Upload to Instagram
+        const result = await uploadVideo(ig, localVideoPath, localCoverPath, caption);
+        
+        return JSON.stringify({
+          success: true,
+          message: 'Video uploaded successfully',
+          ...result
+        });
+      } catch (error: any) {
+        return JSON.stringify({
+          success: false,
+          error: error.message
+        });
+      } finally {
+        // Always cleanup the temporary files
+        if (localVideoPath) {
+          cleanupFile(localVideoPath);
+        }
+        if (localCoverPath) {
+          cleanupFile(localCoverPath);
+        }
+      }
     }
   },
   {
     name: 'instagram_get_profile',
     description: 'Get Instagram profile information',
     parameters: z.object({
-      userId: z.string().describe('Instagram user id')
+      userId: z.string().describe('Instagram user id'),
+      username: z.string().describe('Instagram username'),
+      password: z.string().describe('Instagram password')
     }),
     execute: async (args: any) => {
-      const { userId } = args as { userId: string };
-      const { username, password } = getCredentials();
+      const { userId, username, password } = args as { userId: string; username: string; password: string };
+      console.log('Executing instagram_get_profile with args:', args);
       const ig = await login(username, password);
       const result = await getProfile(ig, userId);
       return JSON.stringify(result);
@@ -60,12 +168,14 @@ export const instagramTools: Tool<any>[] = [
   {
     name: 'instagram_get_timeline',
     description: 'Get timeline feed',
+    
     parameters: z.object({
-      limit: z.number().int().min(1).max(50).default(10).describe('Number of posts to fetch')
+      limit: z.number().int().min(1).max(50).default(10).describe('Number of posts to fetch'),
+      username: z.string().describe('Instagram username'),
+      password: z.string().describe('Instagram password')
     }),
     execute: async (args: any) => {
-      const { limit } = args as { limit: number };
-      const { username, password } = getCredentials();
+      const { limit, username, password } = args as { limit: number; username: string; password: string };
       const ig = await login(username, password);
       const result = await getTimelineFeed(ig, limit);
       return JSON.stringify(result.slice(0, limit));
