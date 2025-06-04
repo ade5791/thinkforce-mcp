@@ -6,7 +6,7 @@
   "description": "Model Context Protocol (MCP) Server",
   "private": true,
   "scripts": {
-    "start": "tsx src/index.ts",
+    "start": "tsx src/server/http-server.ts",
     "build": "tsc",
     "build:http": "tsc",
     "dev": "tsx --watch src/index.ts",
