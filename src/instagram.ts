@@ -4,10 +4,16 @@ import { readFile } from 'fs/promises';
 
 export async function login(username: string, password: string) {
   console.log(`Logging in to Instagram as ${username}`);
-  const ig = new IgApiClient();
-  ig.state.generateDevice(username);
-  await ig.account.login(username, password);
-  return ig;
+  try {
+    const ig = new IgApiClient();
+    ig.state.generateDevice(username);
+    await ig.account.login(username, password);
+    console.log('Login successful', username);
+    return ig;
+  } catch (error) {
+    console.error('Login failed:', error);
+    throw error;
+  }
 }
 
 export async function uploadPhoto(ig: IgApiClient, filePath: string, caption?: string) {

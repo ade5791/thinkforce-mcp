@@ -176,9 +176,46 @@ export const instagramTools: Tool<any>[] = [
     }),
     execute: async (args: any) => {
       const { limit, username, password } = args as { limit: number; username: string; password: string };
+      console.log('Executing instagram_get_timeline with args:', args);
       const ig = await login(username, password);
-      const result = await getTimelineFeed(ig, limit);
-      return JSON.stringify(result.slice(0, limit));
-    }
+      console.log(`Fetching timeline feed with limit: ${limit}`);
+      let validatedLimit = limit;
+      if (validatedLimit < 1 || validatedLimit > 50) {
+        validatedLimit = 10; // Default limit if out of range
+      }
+      if (typeof validatedLimit !== 'number' || !Number.isInteger(validatedLimit)) {
+        throw new Error('Limit must be an integer');
+      }
+      const result = await getTimelineFeed(ig, validatedLimit);
+      if (!Array.isArray(result)) {
+        throw new Error('Invalid response from Instagram API');
+      }
+      console.log(`Fetched ${result.length} items from timeline feed`);
+      if (result.length === 0) {
+        console.warn('No items found in the timeline feed');
+      }
+      // Return only the requested number of items
+      if (result.length < validatedLimit) {
+        console.warn(`Requested limit ${validatedLimit} exceeds available items ${result.length}. Returning all available items.`);
+        validatedLimit = result.length; // Adjust limit to available items
+      }
+      // Convert result to JSON string and return
+      console.log(`Returning ${result.slice(0, validatedLimit).length} items`);
+      if (result.length === 0) {
+        return JSON.stringify([]);
+      }
+      // Ensure we return a JSON string of the result
+      if (typeof result !== 'object') {
+        throw new Error('Result is not an object');
+      }
+      if (Array.isArray(result)) {
+        // If result is an array, slice it to the validated limit
+        return JSON.stringify(result.slice(0, validatedLimit));
+      } else {
+        // If result is an object, return it as is
+        return JSON.stringify(result);
+      } 
+
+  }
   }
 ];
