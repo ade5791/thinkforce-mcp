@@ -283,3 +283,10 @@ For more information about the Model Context Protocol, visit the [MCP Documentat
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Instagram Tools
+
+This project includes tools that use the [instagram-private-api](https://github.com/dilame/instagram-private-api) to upload photos and videos or access account data.
+
+Set environment variables `IG_USERNAME` and `IG_PASSWORD` with your Instagram credentials before running the server. Using unofficial APIs may violate Instagram terms of service.
+
